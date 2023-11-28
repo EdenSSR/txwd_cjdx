@@ -1,0 +1,11 @@
+# skip pycache
+__pycache__
+
+# skip image
+image/
+
+# skip SAVEUSER
+SAVEUSER/
+
+# skip User Data
+User Data/
