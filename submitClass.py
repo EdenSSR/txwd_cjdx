@@ -191,19 +191,30 @@ class SubmitClass():
             username (str): 登录的用户qq号
             needImg (bool): 是否需要登录的二维码
         """
-        # 获取对应的登录专用options
-        options = self.generateOptions(username)
-        # 将登录的浏览器控制权挂载到类变量下
-        self.logindriver = webdriver.Chrome(options=options)  # 打开浏览器
-        self.logindriver.get(url)
+        # 这里先判断是否存在单用户使用的浏览器对象
+        if self.singleUserIsLogin is True and self.singleUserLoginDriver is not None:
+            # 存在，说明是未登录, 并且已经提前使用过islogin函数去调用,这里就不用在开启浏览器
+            self.logindriver = self.singleUserLoginDriver
+        else:
+            # 获取对应的登录专用options
+            options = self.generateOptions(username)
+            # 将登录的浏览器控制权挂载到类变量下
+            self.logindriver = webdriver.Chrome(options=options)  # 打开浏览器
+            self.logindriver.get(url)
         # 保存图片
         msg, code, res = self.saveLoginImg(self.logindriver, username)
         nonebot.logger.info(msg)
         return res
 
-    def delay_quit(self, delay=0.5):
-        time.sleep(delay)
-        self.logindriver.quit()
+    def quitWebDriver(self):
+        """
+            用于释放所有的浏览器对象
+        """
+        if self.singleUserLoginDriver is not None and self.singleUserIsLogin is False:
+            # 表示单用户浏览器对象不需要的时候
+            self.singleUserLoginDriver.quit()
+        if self.logindriver is not None:
+            self.logindriver.quit()
 
     def islogin(self, username, url, driver=None, waitSecond=10):
         """用于判断当前用户是否登录
@@ -223,8 +234,14 @@ class SubmitClass():
             driver.get(url)
         # 不为空，直接使用传入进行来的driver即可
         res = self.waitElement(driver, EC.presence_of_element_located, (By.ID, "account-avatar-container"), waitSecond=waitSecond)
-        # 这里默认会关闭一次浏览器对象
-        driver.quit()
+        # 这里说明并没有检查到登录对象， 可以将未登录使用的driver对象保留下来，方便后续使用
+        if res == False:
+            # 表示可以使用单用户登录driver
+            self.singleUserIsLogin = True
+            self.singleUserLoginDriver = driver
+        else:
+            # 说明用户已经登录, 将浏览器对象释放
+            driver.quit()
         return res
 
     def getAllUserInfo(self):

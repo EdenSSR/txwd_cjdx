@@ -101,6 +101,8 @@ async def txwd_login(bot: Bot, event: Event):
                 'message': "可能登录上了，也可能没有，再发一次登录指令试试"
                 })
                 json_handle.update_json(dir_path + r"\userinfo.json", user_id, "login_state", "False")
+            # finally 关闭所有的浏览器对象
+            sub.quitWebDriver()
         checkFunc = checkUserLogin(sub, user_id, 5, 5)
         # 开启协程
         loop  = asyncio.get_event_loop()
