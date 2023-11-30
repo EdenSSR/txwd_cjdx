@@ -42,6 +42,8 @@ class SubmitClass():
         # 是否使用未登录时的浏览器控制对象，从而实现在单一用户的情况下尽量少开浏览器
         self.singleUserIsLogin = False
         self.singleUserLoginDriver = None
+        # 用于执行提交登录使用的driver
+        self.singleSubmitDriver = None
 
 
     def initUserInfo(self, username: str):
@@ -216,13 +218,14 @@ class SubmitClass():
         if self.logindriver is not None:
             self.logindriver.quit()
 
-    def islogin(self, username, url, driver=None, waitSecond=10):
+    def islogin(self, username, url, driver=None, usesubmit=False,waitSecond=10):
         """用于判断当前用户是否登录
 
         Args:
             username: string qq号
             url: string 登录链接
             driver: Webdriver.Chrome 开启的浏览器对象
+            usesubmit: bool 是否保存用于提交的浏览器对象
             waitSecond: int 浏览器显示等待时间
         Returns:
             bool: 是否登录了
@@ -236,12 +239,22 @@ class SubmitClass():
         res = self.waitElement(driver, EC.presence_of_element_located, (By.ID, "account-avatar-container"), waitSecond=waitSecond)
         # 这里说明并没有检查到登录对象， 可以将未登录使用的driver对象保留下来，方便后续使用
         if res == False:
-            # 表示可以使用单用户登录driver
-            self.singleUserIsLogin = True
-            self.singleUserLoginDriver = driver
+            if usesubmit == False:
+                # 不用于后续提交使用
+                # 表示可以使用单用户登录driver
+                self.singleUserIsLogin = True
+                self.singleUserLoginDriver = driver
+            else:
+                # 用于后续提交使用，但是当前用户并没有登录，关闭浏览器对象
+                driver.quit()
         else:
-            # 说明用户已经登录, 将浏览器对象释放
-            driver.quit()
+            if usesubmit == False:
+                # 说明用户已经登录, 将浏览器对象释放
+                # 并且不需要后续登录
+                driver.quit()
+            else:
+                # 需要使用它在进行提交
+                self.singleSubmitDriver = driver
         return res
 
     def getAllUserInfo(self):
@@ -291,7 +304,7 @@ class SubmitClass():
         return self.allUserInfoDict
 
     # 适配下新版的收集表
-    def singleSubmit(self, userinfo: str, url: str, mydict: dict):
+    # def singleSubmit(self, userinfo: str, url: str, mydict: dict):
         """构建单个用户options
 
         Args:
@@ -365,6 +378,28 @@ class SubmitClass():
             except Exception as E:
                 traceback.print_exc()
                 return False
+
+
+    # 适配下新版的收集表
+    def singleSubmit(self, userinfo: str, url: str, mydict: dict):
+        """构建单个用户options
+
+        Args:
+            userinfo (str): 用户qq号
+            url (str): 访问的url
+            mydict (dict): 提交的用户信息
+        """
+        # 先判断用户是否登录, 并且当前是直接请求问卷路径，没有driver
+        isUserLogin = self.islogin(username=userinfo, url=url, usesubmit=True)
+        if isUserLogin == False:
+            # 说明并没有登录
+            print(userinfo+" not Sign in!!!!!!!!!!!")
+            return False
+        '''
+        TODO: 
+            后续要完成提交
+        '''
+
 
     def returnMsg(self, msg, code):
         """用于提示信息, 暂时没用
